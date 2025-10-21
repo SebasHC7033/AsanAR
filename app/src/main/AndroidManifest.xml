@@ -13,30 +13,35 @@
         android:theme="@style/Theme.AsanAR"
         tools:targetApi="34">
         <activity
+            android:name=".loading_Splashpage"
+            android:exported="true">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+        </activity>
+
+        <activity
             android:name=".MainActivity2"
             android:exported="false" />
         <activity
             android:name=".Main"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+            android:exported="false" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
         <activity
             android:name=".MainActivity"
-            android:exported="true" />
+            android:exported="false" />
 
         <provider
-            android:authorities="com.coding.captureimage.FileProvider"
             android:name="androidx.core.content.FileProvider"
+            android:authorities="com.coding.captureimage.FileProvider"
             android:exported="false"
             android:grantUriPermissions="true">
-            <meta-data android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths"/>
-            </provider>
-
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

@@ -45,8 +45,8 @@
         android:id="@+id/textView2"
         android:layout_width="264dp"
         android:layout_height="123dp"
-        android:layout_marginStart="28dp"
-        android:layout_marginTop="112dp"
+        android:layout_marginStart="36dp"
+        android:layout_marginTop="124dp"
         android:text="Welcome, USER!"
         android:textSize="34sp"
         app:layout_constraintStart_toStartOf="parent"
@@ -54,8 +54,8 @@
 
     <ImageView
         android:id="@+id/imageView"
-        android:layout_width="204dp"
-        android:layout_height="154dp"
+        android:layout_width="242dp"
+        android:layout_height="184dp"
         android:layout_marginTop="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.497"
