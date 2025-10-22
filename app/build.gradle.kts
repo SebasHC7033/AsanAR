@@ -1,3 +1,5 @@
+import com.android.build.api.dsl.Packaging
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -38,9 +40,11 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
-    packagingOptions {
+
+    // Ensures 16kb page-alignment for .so files
+    fun Packaging.() {
         jniLibs {
-            useLegacyPackaging = false  // Ensures 16kb page-alignment for .so files
+            useLegacyPackaging = false
         }
     }
 }
@@ -56,6 +60,6 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 
-    implementation("com.google.mediapipe:tasks-vision:latest.release")
+    implementation("com.google.mediapipe:tasks-vision:0.10.0")
 
 }

@@ -5,8 +5,13 @@ import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.Toast
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Color
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
@@ -27,6 +32,12 @@ class PoseAnalysisActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main3)
 
         imageView = findViewById(R.id.analysisImageView)
+
+        val backButton = findViewById<Button>(R.id.backButton)
+
+        backButton.setOnClickListener {
+            finish()
+        }
 
         //debugging code. if image not sent, say and close. if image unopen able, say and close.
 
@@ -76,16 +87,68 @@ class PoseAnalysisActivity : AppCompatActivity() {
 
     private fun analyzePose(uri: Uri) {
         try {
+            // Load the image
             val inputStream = contentResolver.openInputStream(uri)
-            val bitmap = BitmapFactory.decodeStream(inputStream)
+            val originalBitmap = BitmapFactory.decodeStream(inputStream)
+            val bitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
+
             val mpImage = BitmapImageBuilder(bitmap).build()
 
+            // Detect poses
             val result: PoseLandmarkerResult = poseLandmarker.detect(mpImage)
 
-            // Show the image in the ImageView
+            // Draw landmarks and connections
+            val canvas = Canvas(bitmap)
+            val paintDot = Paint().apply {
+                color = Color.RED
+                style = Paint.Style.FILL
+                strokeWidth = 12f  // larger dot size
+            }
+            val paintLine = Paint().apply {
+                color = Color.WHITE
+                style = Paint.Style.STROKE
+                strokeWidth = 6f   // slightly thicker line
+            }
+
+            // Standard pose connections (using MediaPipe Pose Landmarks)
+            val connections = listOf(
+                Pair(11, 12),  // LEFT_SHOULDER -> RIGHT_SHOULDER
+                Pair(11, 13),  // LEFT_SHOULDER -> LEFT_ELBOW
+                Pair(13, 15),  // LEFT_ELBOW -> LEFT_WRIST
+                Pair(12, 14),  // RIGHT_SHOULDER -> RIGHT_ELBOW
+                Pair(14, 16),  // RIGHT_ELBOW -> RIGHT_WRIST
+                Pair(23, 24),  // LEFT_HIP -> RIGHT_HIP
+                Pair(11, 23),  // LEFT_SHOULDER -> LEFT_HIP
+                Pair(12, 24),  // RIGHT_SHOULDER -> RIGHT_HIP
+                Pair(23, 25),  // LEFT_HIP -> LEFT_KNEE
+                Pair(25, 27),  // LEFT_KNEE -> LEFT_ANKLE
+                Pair(24, 26),  // RIGHT_HIP -> RIGHT_KNEE
+                Pair(26, 28)   // RIGHT_KNEE -> RIGHT_ANKLE
+            )
+            // Draw landmarks
+            result.landmarks().forEach { landmarkList ->
+                landmarkList.forEach { landmark ->
+                    val x = (landmark.x() * bitmap.width).toFloat()
+                    val y = (landmark.y() * bitmap.height).toFloat()
+                    canvas.drawCircle(x, y, 12f, paintDot) // bigger red dots
+                }
+
+                // Draw connections
+                connections.forEach { (startIdx, endIdx) ->
+                    val start = landmarkList[startIdx]
+                    val end = landmarkList[endIdx]
+                    val startX = (start.x() * bitmap.width).toFloat()
+                    val startY = (start.y() * bitmap.height).toFloat()
+                    val endX = (end.x() * bitmap.width).toFloat()
+                    val endY = (end.y() * bitmap.height).toFloat()
+                    canvas.drawLine(startX, startY, endX, endY, paintLine)
+                }
+            }
+
+            // Show the final bitmap with landmarks
             imageView.setImageBitmap(bitmap)
 
-            // Save the landmarks to a CSV file
+            // Optionally save CSV
             saveLandmarks(result)
 
             Toast.makeText(
