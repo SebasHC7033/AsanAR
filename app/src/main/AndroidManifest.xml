@@ -23,10 +23,10 @@
         </activity>
 
         <activity
-            android:name=".MainActivity2"
+            android:name=".PoseAnalysisActivity"
             android:exported="false" />
         <activity
-            android:name=".Main"
+            android:name=".HomePage"
             android:exported="false" />
 
         <activity
