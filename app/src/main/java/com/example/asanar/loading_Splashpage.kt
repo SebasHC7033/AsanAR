@@ -57,7 +57,7 @@ class loading_Splashpage : AppCompatActivity() {
             mediaPlayer.stop()
             mediaPlayer.release()
 
-            startActivity(Intent(this, Main::class.java))
+            startActivity(Intent(this, HomePage::class.java))
             finish()
         }, 3000)
     }
