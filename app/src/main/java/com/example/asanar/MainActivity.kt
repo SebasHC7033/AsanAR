@@ -44,18 +44,14 @@ class MainActivity : AppCompatActivity() {
             contract.launch(imageUrl)
         }
     }
-    private fun createImageUri():Uri {
-        val folder = File(filesDir, "camera_photos")
-        if (!folder.exists()){
-            folder.mkdirs()
-        }
-
-        val image = File(folder, "photos.png")
-
-        return FileProvider.getUriForFile(this,
-            "com.coding.captureimage.FileProvider",
-            image)
+    private fun createImageUri(): Uri {
+        val folder = File(filesDir, "camera_photos").apply { if (!exists()) mkdirs() }
+        val image = File(folder, "photo_${System.currentTimeMillis()}.jpg")
+        return FileProvider.getUriForFile(
+            this, "com.coding.captureimage.FileProvider", image
+        )
     }
+
 
 
 }

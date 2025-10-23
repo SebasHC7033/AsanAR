@@ -20,6 +20,8 @@ import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
 import java.io.File
 import java.io.FileWriter
 import java.io.IOException
+import androidx.exifinterface.media.ExifInterface
+import android.graphics.Matrix
 
 class PoseAnalysisActivity : AppCompatActivity() {
 
@@ -90,8 +92,8 @@ class PoseAnalysisActivity : AppCompatActivity() {
             // Load the image
             val inputStream = contentResolver.openInputStream(uri)
             val originalBitmap = BitmapFactory.decodeStream(inputStream)
-            val bitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
-
+            val bitmap = loadUprightBitmap(uri)
+            imageView.setImageBitmap(bitmap)
             val mpImage = BitmapImageBuilder(bitmap).build()
 
             // Detect poses
@@ -183,5 +185,35 @@ class PoseAnalysisActivity : AppCompatActivity() {
             e.printStackTrace()
             Toast.makeText(this, "Failed to save landmarks", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun loadUprightBitmap(uri: Uri): Bitmap {
+        val original = contentResolver.openInputStream(uri)!!.use {
+            BitmapFactory.decodeStream(it)!!
+        }
+        val orientation = contentResolver.openInputStream(uri)!!.use {
+            ExifInterface(it).getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL
+            )
+        }
+
+        val m = Matrix().apply {
+            when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90  -> postRotate(90f)
+                ExifInterface.ORIENTATION_ROTATE_180 -> postRotate(180f)
+                ExifInterface.ORIENTATION_ROTATE_270 -> postRotate(270f)
+                ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> postScale(-1f, 1f)
+                ExifInterface.ORIENTATION_FLIP_VERTICAL   -> postScale( 1f,-1f)
+                ExifInterface.ORIENTATION_TRANSPOSE -> { postRotate(90f);  postScale(-1f, 1f) }
+                ExifInterface.ORIENTATION_TRANSVERSE-> { postRotate(270f); postScale(-1f, 1f) }
+            }
+        }
+
+        val rotated = if (!m.isIdentity)
+            Bitmap.createBitmap(original, 0, 0, original.width, original.height, m, true)
+        else original
+
+        return rotated.copy(Bitmap.Config.ARGB_8888, true)
     }
 }
