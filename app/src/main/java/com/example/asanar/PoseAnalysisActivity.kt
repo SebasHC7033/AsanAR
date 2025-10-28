@@ -166,10 +166,11 @@ class PoseAnalysisActivity : AppCompatActivity() {
     }
 
     private fun saveLandmarks(result: PoseLandmarkerResult) {
-        val folder = File(filesDir, "pose_landmarks")
+        val folder = File(getExternalFilesDir(null), "pose_landmarks")
         if (!folder.exists()) folder.mkdirs()
 
         val file = File(folder, "pose_${System.currentTimeMillis()}.csv")
+        Log.d("PoseSave", "Saved at: ${file.absolutePath}")
 
         try {
             FileWriter(file).use { writer ->
