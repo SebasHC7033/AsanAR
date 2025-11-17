@@ -22,18 +22,32 @@ import java.io.FileWriter
 import java.io.IOException
 import androidx.exifinterface.media.ExifInterface
 import android.graphics.Matrix
+import android.widget.TextView
+import org.tensorflow.lite.Interpreter
+import java.io.FileInputStream
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
 
 class PoseAnalysisActivity : AppCompatActivity() {
 
 
     private lateinit var poseLandmarker: PoseLandmarker
     private lateinit var imageView: ImageView
+    private lateinit var predictionText: TextView
+    private lateinit var tflite: Interpreter
+    private val classNames = listOf("tree", "cobra", "warriorII")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main3)
 
+        // Load TensorFlow Lite Model
+        val tfliteModel = loadModelFile()
+        val tfliteOptions = Interpreter.Options()
+        tflite = Interpreter(tfliteModel, tfliteOptions)
+
         imageView = findViewById(R.id.analysisImageView)
+        predictionText = findViewById(R.id.predictionText)
 
         val backButton = findViewById<Button>(R.id.backButton)
 
@@ -150,6 +164,32 @@ class PoseAnalysisActivity : AppCompatActivity() {
             // Show the final bitmap with landmarks
             imageView.setImageBitmap(bitmap)
 
+
+            // ---- Prepare landmark vector (26 floats: x,y pairs) ----
+            val inputVector = FloatArray(26)  // 13 landmarks * 2 coords (X,Y)
+
+            var i = 0
+            val landmarkList = result.landmarks()[0]
+
+            val selected = listOf(0,11,12,13,14,15,16,23,24,25,26,27,28)
+            selected.forEach { idx ->
+                inputVector[i++] = landmarkList[idx].x()
+                inputVector[i++] = landmarkList[idx].y()
+            }
+
+            // ---- Run model ----
+            val output = Array(1) { FloatArray(classNames.size) }
+            tflite.run(inputVector, output)
+
+            // ---- Pick highest confidence ----
+            val predictedIdx = output[0].indices.maxBy { output[0][it] }
+            val predictedPose = classNames[predictedIdx]
+            predictionText.text = "Pose: $predictedPose"
+
+            Toast.makeText(this, "Predicted: $predictedPose", Toast.LENGTH_LONG).show()
+
+
+
             // Optionally save CSV
             saveLandmarks(result)
 
@@ -166,6 +206,18 @@ class PoseAnalysisActivity : AppCompatActivity() {
     }
 
     private fun saveLandmarks(result: PoseLandmarkerResult) {
+
+        // Landmarks to keep; face and finger landmarks not needed for pose classifications
+        val selectedLandmarks = listOf(
+            0,     // Nose
+            11, 12, // Shoulders
+            13, 14, // Elbows
+            15, 16, // Wrists
+            23, 24, // Hips
+            25, 26, // Knees
+            27, 28  // Ankles
+        )
+
         val folder = File(getExternalFilesDir(null), "pose_landmarks")
         if (!folder.exists()) folder.mkdirs()
 
@@ -174,14 +226,33 @@ class PoseAnalysisActivity : AppCompatActivity() {
 
         try {
             FileWriter(file).use { writer ->
-                // Loop through each pose
-                result.landmarks().forEachIndexed { poseIndex, landmarkList ->
-                    landmarkList.forEachIndexed { landmarkIndex, landmark ->
-                        writer.append("${poseIndex},${landmarkIndex},${landmark.x()},${landmark.y()},${landmark.z()}\n")
-                    }
+
+                // --- Write header row ---
+                val header = StringBuilder()
+                selectedLandmarks.forEach { idx ->
+                    header.append("lm_${idx}_x,lm_${idx}_y,")
                 }
+                writer.append(header.removeSuffix(",").toString())
+                writer.append("\n")
+
+                // --- Write one row of 24 numbers ---
+                val row = StringBuilder()
+                val landmarkList = result.landmarks()[0] // first person only
+
+                selectedLandmarks.forEach { idx ->
+                    val lm = landmarkList[idx]
+                    row.append("${lm.x()},${lm.y()},")
+                }
+
+                writer.append(row.removeSuffix(",").toString())
             }
-            Toast.makeText(this, "Landmarks saved: ${file.absolutePath}", Toast.LENGTH_SHORT).show()
+
+            Toast.makeText(
+                this,
+                "Landmarks saved: ${file.absolutePath}",
+                Toast.LENGTH_SHORT
+            ).show()
+
         } catch (e: IOException) {
             e.printStackTrace()
             Toast.makeText(this, "Failed to save landmarks", Toast.LENGTH_SHORT).show()
@@ -216,5 +287,21 @@ class PoseAnalysisActivity : AppCompatActivity() {
         else original
 
         return rotated.copy(Bitmap.Config.ARGB_8888, true)
+    }
+
+    private fun loadModelFile(): ByteBuffer {
+        val fileDescriptor = assets.openFd("pose_classifier.tflite")
+        val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
+        val fileChannel = inputStream.channel
+        val startOffset = fileDescriptor.startOffset
+        val declaredLength = fileDescriptor.declaredLength
+
+        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
+    }
+
+    private fun FloatArray.reshape(rows: Int, cols: Int): Array<FloatArray> {
+        return Array(rows) { row ->
+            FloatArray(cols) { col -> this[row * cols + col] }
+        }
     }
 }

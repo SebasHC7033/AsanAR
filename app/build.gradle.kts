@@ -63,4 +63,7 @@ dependencies {
     implementation("com.google.mediapipe:tasks-vision:0.10.0")
     implementation("androidx.exifinterface:exifinterface:1.4.1")
 
+    implementation("org.tensorflow:tensorflow-lite:2.12.0")
+    implementation("org.tensorflow:tensorflow-lite-support:0.4.3")
+
 }
